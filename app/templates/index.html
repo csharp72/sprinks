@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+
+  <style>
+    html {
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    #sprinkler-table {
+      background: #ddd;
+      border-radius: 5px;
+      padding: 10px;
+      text-align: center;
+    }
+
+    #sprinkler-table th,
+    #sprinkler-table td {
+      padding: 3px 10px;
+    }
+
+    #sprinkler-table input,
+    #sprinkler-table label {
+      vertical-align: middle;
+      margin: 2px 4px;
+    }
+
+    #sprinkler-table input[type=checkbox] {
+      /* appearance: none; */
+      background: white;
+      border: 0;
+      border-radius: 3px;
+      height: 20px;
+      width: 20px;
+    }
+
+    #sprinkler-table #duration {
+      width: 35px;
+      text-align: right;
+      border-radius: 3px;
+      border: 0;
+      padding: 3px;
+      margin: 6px;
+    }
+
+    #sprinkler-table .indicator {
+      display: inline-block;
+      width: 7px;
+      height: 7px;
+      background: #ccc;
+      border-radius: 50%;
+      border: 1px solid #aaa;
+      margin: 6px 0;
+      vertical-align: middle;
+    }
+    #sprinkler-table td.sprink.queued .indicator {
+      background-color: hotpink;
+    }
+    #sprinkler-table td.sprink.active .indicator {
+      background-color: #01f386;
+    }
+
+    button {
+      border-radius: 5px;
+      padding: 10px 16px;
+      border: 1px solid #333;
+      background: white;
+      font-weight: 700;
+      box-shadow: 0px 2px 5px 0px rgba(0,0,0,.3);
+      cursor: pointer;
+      text-transform: uppercase;
+    }
+
+    button.primary {
+      background: #06d3e6;
+      color: #0b4f55;
+      border-color: white;
+    }
+    button.warn {
+      background: #ea3d3d;
+      color: #55140b;
+      border-color: white;
+    }
+
+    #queue {
+      display: flex;
+    }
+    #queue-items {
+      display: flex;
+    }
+    .queue-item {
+      margin: 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .queue-item .sprink-id {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 50px;
+      width: 50px;
+      border-radius: 50%;
+      background: hotpink;
+      font-weight: 800;
+      color: white;
+    }
+    .queue-item.active .sprink-id {
+      background: #01f386;
+    }
+
+    .queue-item .countdown {
+      font-size: .75em;
+    }
+
+  </style>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.1/socket.io.min.js" integrity="sha512-+NaO7d6gQ1YPxvc/qHIqZEchjGm207SszoNeMgppoqD/67fEqmc1edS8zrbxPD+4RQI3gDgT/83ihpFW61TG/Q==" crossorigin="anonymous"></script>
+  <script>const divmod = (x, y) => [Math.floor(x / y), x % y];</script>
+</head>
+<body>
+  <h1>Sprinks!</h1>
+  <!-- {% if count_down %}
+  <p>Sprinklers running for <span id="count-down-duration">{{count_down}}</span></p>
+  <script>
+    let $cdd = document.getElementById('count-down-duration');
+    let cdd = {{count_down}} * 60 * 1000;
+    let cdTimer = setInterval(() => {
+      cdd -= 1000;
+      if (cdd <= 0){
+        clearInterval(cdTimer);
+        $cdd.innerText = '';
+      } else {
+        minsec = divmod(cdd, 60);
+        $cdd.innerText = `${Math.floor(cdd/1000/60)}:${cdd%60000/1000}`
+      }
+    }, 1000);
+  </script>
+  {% endif %} -->
+
+  <div id="queue">
+    <div id="queue-items">
+      <template id="queue-item">
+        <div class="queue-item">
+          <div class="sprink-id"></div>
+          <div class="countdown">
+            <span>⏲️</span>
+            <span class="sprink-dur"></span>
+          </div>
+        </div>
+      </template>
+    </div>
+  </div>
+
+  <form id="sprinkler-selection" action="{{url_for('sprinkForm')}}" method="POST" >
+    <table id="sprinkler-table">
+      <thead>
+        <th class="sector">Frontyard</th>
+        <th class="sector">Backyard</th>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="sprink sprink-1">
+            <input id="sprink-1" name="sprinks" type="checkbox" value="1" checked="checked" />
+            <label for="sprink-1">1</label>
+            <div class="indicator"></div>
+          </td>
+          <td class="sprink sprink-4">
+            <input id="sprink-4" name="sprinks" type="checkbox" value="4" checked="checked" />
+            <label for="sprink-4">4</label>
+            <div class="indicator"></div>
+          </td>
+        </tr>
+        <tr>
+          <td class="sprink sprink-2">
+            <input id="sprink-2" name="sprinks" type="checkbox" value="2" checked="checked" />
+            <label for="sprink-2">2</label>
+            <div class="indicator"></div>
+          </td>
+          <td class="sprink sprink-5">
+            <input id="sprink-5" name="sprinks" type="checkbox" value="5" checked="checked" />
+            <label for="sprink-5">5</label>
+            <div class="indicator"></div>
+          </td>
+        </tr>
+        <tr>
+          <td class="sprink sprink-3">
+            <input id="sprink-3" name="sprinks" type="checkbox" value="3" checked="checked" />
+            <label for="sprink-3">3</label>
+            <div class="indicator"></div>
+          </td>
+          <td class="sprink sprink-6">
+            <input id="sprink-6" name="sprinks" type="checkbox" value="6" checked="checked" />
+            <label for="sprink-6">6</label>
+            <div class="indicator"></div>
+          </td>
+        </tr>
+        <tr>
+          <td colspan="2">
+            <input id="duration" name="duration" type="number" value="1" min="1" max="30" />
+            minutes
+          </td>
+        </tr>
+        <tr>
+          <td colspan="2">
+            <button class="primary">RUN SPRINKS</button>
+          </td>
+        </tr>
+        <tr>
+          <td colspan="2">
+            <button class="warn fetch-link" href="{{url_for('sprinksStop')}}">Stop sprinks</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </form>
+
+  <p>
+    <div><a class="fetch-link" href="/sprinks/run/all/1">All sprinklers for 1 minute</a></div>
+    <div><a class="fetch-link" href="/sprinks/run/back/1">Backyard for 1 minute</a></div>
+    <div><a class="fetch-link" href="/sprinks/run/front/1">Frontyard for 1 minute</a></div>
+    <div><a class="fetch-link" href="{{url_for('sprinksStop')}}">Stop the sprinks</a></div>
+  </p>
+
+  <details>
+    <summary><code>Sprink Info</code></summary>
+    <pre id="sprink-info">{{sprinkInfo}}</pre>
+  </details>
+
+  <div id="log"></div>
+
+  <script>
+    let fetchLinks = document.querySelectorAll(".fetch-link");
+    fetchLinks.forEach(link => {
+      link.addEventListener("click", e => {
+        e.preventDefault();
+        let reqUrl = e.target.href || e.target.attributes.href.value;
+        if (reqUrl) {
+          let req = fetch(reqUrl);
+          req.then(res => console.log(res));
+        }
+      });
+    });
+  </script>
+
+  <script>
+    const socket = io();
+    const $log = document.getElementById('log');
+    // const $countdown = document.querySelector('#countdown');
+    const $queueItemTemplate = document.querySelector('#queue-item');
+    const $queue = document.querySelector('#queue-items');
+
+    let sprinkData = {};
+
+    const appendLog = (msg) => $log.innerHTML += String(msg);
+
+    let updatePolling = setInterval(() => {
+      socket.emit('sprink update req');
+    }, 1000)
+
+    socket.on('sprink update res', msg => {
+      sprinkData = JSON.parse(msg).data;
+      // appendLog(`<p>Received message: ${JSON.stringify(sprinkData)}</p>`);
+      // console.log('sprink update', sprinkData);
+      document.querySelector('#sprink-info').innerText = JSON.stringify(sprinkData, undefined, 2);
+
+      // $countdown.innerText = sprinkData.timer == '00:00' ? '' : sprinkData.timer;
+
+      sprinkData.sprinks.forEach(sprink => {
+        // let $sprinkStatus = document.querySelector(`.sprink-status#sprink-${sprink.id}`);
+        if (sprink.is_active) {
+          // $sprinkStatus.classList.add('active');
+          document.querySelector(`.sprink-${sprink.id}`).classList.add('active')
+        } else {
+          // $sprinkStatus.classList.remove('active');
+          document.querySelector(`.sprink-${sprink.id}`).classList.remove('active')
+        }
+        if (sprinkData.queue.find(q => q.id === sprink.id)) {
+          // $sprinkStatus.classList.add('queued');
+          document.querySelector(`.sprink-${sprink.id}`).classList.add('queued')
+        } else {
+          // $sprinkStatus.classList.remove('queued');
+          document.querySelector(`.sprink-${sprink.id}`).classList.remove('queued')
+        }
+      })
+
+      $queue.innerHTML = '';
+      sprinkData.queue.forEach((q,i) => {
+        let {id, duration, queued_at} = q;
+        let sprink = sprinkData.sprinks.find(s => s.id === id)
+        let $qitem = $queueItemTemplate.content.cloneNode(true);
+        $qitem.querySelector('.sprink-id').textContent = id;
+
+        if (i === 0 && sprink.is_active) {
+          $qitem.querySelector('.queue-item').classList.add('active');
+          $qitem.querySelector('.sprink-dur').textContent = `${sprinkData.timer}`;
+        } else {
+          let countdown = divmod(duration, 60);
+          $qitem.querySelector('.sprink-dur').textContent = `${String(countdown[0]).padStart(2,'0')}:${String(countdown[1]).padStart(2, '0')}`;
+        }
+        $queue.appendChild($qitem);
+      })
+    })
+  </script>
+</body>
+</html>
